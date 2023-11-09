@@ -1,74 +1,53 @@
-const express = require("express");
+// registrationRoutes.js
+const express = require('express');
 const router = express.Router();
-const bcrypt = require("bcryptjs");
-const jwt = require('jsonwebtoken');
-const NewUser = require("../models/newUserSchema");
+const bcrypt = require('bcrypt');
+const AllowedUsers = require('../models/alloweduserSchema'); // Import your Mongoose model
+const NewUser = require('../models/newuserSchema'); // Import your NewUser schema/model
 
-// Register a new user
-router.post('/register', async (req, res) => {
+router.post('/', async (req, res) => {
+  const { name, email, phone, dateOfBirth, password } = req.body;
+
   try {
-    const {
-      firstname,
-      lastname,
-      email,
-      phone,
-      yearofadmission,
-      yearofgrad,
-      department,
-      dateofbirth,
-      employed,
-      designation,
-      companyname,
-      companylocation,
-      about,
-      password,
-      cpassword,
-      linkedin,  // Add fields for social media links
-      twitter,   // Add fields for social media links
-      github,    // Add fields for social media links
-    } = req.body;
+    console.log('Received request with data:', req.body);
 
-    const userExists = await NewUser.findOne({ email: email });
-
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists with this email" });
+    // Basic validation (you can add more validation as needed)
+    if (!name || !email || !phone || !dateOfBirth || !password) {
+      console.log('Validation failed. All fields are required.');
+      return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
-    if (password !== cpassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
+    // Check if the user is allowed (exists in the allowed_users collection)
+    const allowedUser = await AllowedUsers.findOne({ name, email, phone });
+
+    if (allowedUser) {
+      // Hash the password before storing it
+      const hashedPassword = await bcrypt.hash(password, 10); // Adjust the salt rounds as needed
+
+      // Create a new user in the NewUser collection
+      const newUser = new NewUser({
+        name,
+        email,
+        phone,
+        date_of_birth: dateOfBirth,
+        password: hashedPassword,
+      });
+
+      await newUser.save();
+      
+      console.log('Registration successful.');
+      // Return success status
+      return res.status(200).json({ success: true, message: 'Registration successful' });
+    } else {
+      // User not allowed, return an error
+      console.log('User not allowed to register.');
+      return res.status(403).json({ success: false, message: 'User not allowed to register.' });
     }
-
-    const newUser = new NewUser({
-      firstname,
-      lastname,
-      email,
-      phone,
-      yearofadmission,
-      yearofgrad,
-      department,
-      dateofbirth,
-      employed,
-      designation,
-      companyname,
-      companylocation,
-      about,
-      password,
-      cpassword,
-      linkedin,  // Store social media links
-      twitter,   // Store social media links
-      github,    // Store social media links
-    });
-
-    // Password hashing
-    newUser.password = await bcrypt.hash(password, 12);
-    newUser.cpassword = await bcrypt.hash(cpassword, 12);
-
-    const savedUser = await newUser.save();
-    res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('Error during registration:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
+
 
 module.exports = router;

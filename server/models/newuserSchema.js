@@ -1,81 +1,65 @@
+//newuserSchema
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 
 const newUserSchema = new mongoose.Schema({
-  firstname: {
+  name: {
     type: String,
     required: true,
-    // Make sure to handle non-editable logic in your application code, not here
-  },
-  lastname: {
-    type: String,
-    required: true,
-    // Make sure to handle non-editable logic in your application code, not here
   },
   email: {
     type: String,
     required: true,
-    // Make sure to handle non-editable logic in your application code, not here
   },
   phone: {
     type: Number,
     required: true,
-    // Make sure to handle non-editable logic in your application code, not here
   },
   yearofadmission: {
     type: Number,
-    required: true,
   },
   yearofgrad: {
     type: Number,
-    required: true,
   },
   department: {
     type: String,
-    required: true,
   },
-  dateofbirth: {
+  date_of_birth: {
     type: String,
-    // Make sure to handle non-editable logic in your application code, not here
+    required: true,
   },
   employed: {
     type: String,
-    required: true,
   },
   designation: {
     type: String,
-    required: true,
   },
   companyname: {
     type: String,
-    required: true,
   },
   companylocation: {
     type: String,
-    required: true,
   },
   about: {
     type: String,
-    required: true,
+    required: false,
   },
   linkedin: {
-    type: String, // Add a field for LinkedIn profile link
+    type: String,
   },
   twitter: {
-    type: String, // Add a field for Twitter profile link
+    type: String,
   },
   github: {
-    type: String, // Add a field for GitHub profile link
+    type: String,
   },
   password: {
     type: String,
     required: true,
   },
-  cpassword: {
-    type: String,
-    required: true,
-  },
+  // Remove the extra curly brace here
   date: {
     type: Date,
     default: Date.now,
@@ -97,11 +81,10 @@ const newUserSchema = new mongoose.Schema({
       profilePicture: {
         data: Buffer,
         contentType: String,
-        // Marked as editable, but handle editability logic in your application code
       },
       message: {
         type: String,
-        required: true,
+        required: false,
       },
     },
   ],
@@ -119,7 +102,8 @@ const newUserSchema = new mongoose.Schema({
 newUserSchema.pre('save', async function (next) {
   if (this.isModified('password')) {
     this.password = await bcrypt.hash(this.password, 12);
-    this.cpassword = await bcrypt.hash(this.cpassword, 12);
+    // Remove the line below, as cpassword is not defined in your schema
+    // this.cpassword = await bcrypt.hash(this.cpassword, 12);
   }
   next();
 });
@@ -127,6 +111,10 @@ newUserSchema.pre('save', async function (next) {
 // Generating token
 newUserSchema.methods.generateAuthToken = async function () {
   try {
+    if (!process.env.SECRET_KEY) {
+      throw new Error('Secret key not defined');
+    }
+
     let generatedToken = jwt.sign({ _id: this._id }, process.env.SECRET_KEY);
     this.tokens = this.tokens.concat({ token: generatedToken });
     await this.save();
@@ -148,6 +136,6 @@ newUserSchema.methods.addMessage = async function (name, email, phone, message) 
 }
 
 // Collection schema
-const NewUser = mongoose.model('newuser', newUserSchema);
+const NewUser = mongoose.model('NewUser', newUserSchema);
 
 module.exports = NewUser;
