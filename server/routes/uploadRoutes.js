@@ -31,6 +31,7 @@ router.post('/', upload.single('csvFile'), (req, res) => {
             email: row.email,
             phone: row.phone,
             date_of_birth: row.date_of_birth,
+            role: row.role === 'alumni' || row.role === 'admin' ? row.role : 'user',
           });
           await newUser.save();
         } catch (error) {
